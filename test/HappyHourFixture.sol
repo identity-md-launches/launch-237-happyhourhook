@@ -51,7 +51,7 @@ abstract contract HappyHourFixture is BaseHookTest {
         BalanceDelta raw = rawSwap(logs, pool.toId());
         bool unspecifiedIs1 = (specified < 0) == zeroForOne;
         fee = pool.currency0.isAddressZero()
-            ? abs(unspecifiedIs1 ? raw.amount1() : raw.amount0()) * happy.currentFeeBps() / 10_000
+            ? abs(unspecifiedIs1 ? raw.amount1() : raw.amount0()) * expectedFeeBps() / 10_000
             : 0;
 
         assertEq(int256(net.amount0()), int256(raw.amount0()) - int256(unspecifiedIs1 ? 0 : fee));
@@ -65,6 +65,8 @@ abstract contract HappyHourFixture is BaseHookTest {
         checkFeeEvent(logs, pool, unspecifiedIs1 ? pool.currency1 : pool.currency0, fee);
         assertEq(manager.currencyDelta(address(hook), pool.currency0), 0);
         assertEq(manager.currencyDelta(address(hook), pool.currency1), 0);
+        assertEq(manager.currencyDelta(address(swapRouter), pool.currency0), 0);
+        assertEq(manager.currencyDelta(address(swapRouter), pool.currency1), 0);
         assertEq(manager.getNonzeroDeltaCount(), 0);
         assertFalse(manager.isUnlocked());
     }
@@ -90,7 +92,7 @@ abstract contract HappyHourFixture is BaseHookTest {
             assertEq(logs[i].topics[2], bytes32(uint256(uint160(Currency.unwrap(currency)))));
             (uint256 eventFee, uint24 bps) = abi.decode(logs[i].data, (uint256, uint24));
             assertEq(eventFee, fee);
-            assertEq(bps, happy.currentFeeBps());
+            assertEq(bps, expectedFeeBps());
         }
         assertEq(count, fee == 0 ? 0 : 1);
     }
@@ -113,5 +115,10 @@ abstract contract HappyHourFixture is BaseHookTest {
 
     function abs(int128 value) internal pure returns (uint256) {
         return value < 0 ? uint256(-int256(value)) : uint256(int256(value));
+    }
+
+    /// @dev Independent oracle: do not let a wrong hook view validate its own swap fee.
+    function expectedFeeBps() internal view returns (uint24) {
+        return (block.timestamp / 1 hours) % 24 == 16 ? 10 : 100;
     }
 }
