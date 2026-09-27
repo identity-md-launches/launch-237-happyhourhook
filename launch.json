@@ -1,0 +1,26 @@
+{
+  "kind": "univ4_hook",
+  "hook": {
+    "contract": "HappyHourHook",
+    "constructorArgs": [
+      "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543"
+    ],
+    "permissions": [
+      "afterSwap",
+      "afterSwapReturnDelta"
+    ]
+  },
+  "token": {
+    "contract": "LaunchToken",
+    "name": "Happy Hour",
+    "symbol": "HAPY",
+    "decimals": 18
+  },
+  "pool": {
+    "pairedCurrency": "0x0000000000000000000000000000000000000000",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "initialPrice": "78588986356927097284479352776873"
+  },
+  "notes": "Technical description of src/HappyHourHook.sol:HappyHourHook and src/LaunchToken.sol:LaunchToken; ABI arrays are in docs/abi/HappyHourHook.json and docs/abi/LaunchToken.json. The hook takes only the literal Sepolia PoolManager address listed above; the token takes no constructor arguments. The hook constructor validates permission bits 0x0044 under mask 0x3fff; the factory mines the CREATE2 salt. All other permissions are false. The pool is native ETH as currency0 and HAPY as currency1, with a static 0.3% LP fee. initialPrice is decimal sqrtPriceX96 = TickMath.getSqrtPriceAtTick(138000), matching test/BaseHookTest.sol; it encodes sqrt(currency1/currency0) * 2^96. The harness seeds HAPY-only liquidity below that starting tick and exercises first buys with no preexisting ETH. The hook charges floor(abs(unspecified swap delta) * bps / 10000): 10 bps during [16:00:00, 17:00:00) UTC, otherwise 100 bps, separate from the LP fee. It returns a positive unspecified delta, reducing exact-input output or increasing exact-output input, and settles by minting ERC-6909 claims to itself. Accrual is keyed by PoolId and currency; pools with non-native currency0 receive zero hook delta and no accrual. Callbacks accept only the PoolManager. Permissionless donateFees clears accrual, unlocks the manager, burns claims and donates both currencies to in-range LPs; no donation or ETH transfer occurs during swaps. Empty accrual reverts; no in-range liquidity reverts atomically and preserves accrual and claims. Liquidity added immediately before donation shares earlier fees (JIT capture). A few seconds of timestamp skew at hour boundaries is accepted. Neither sender nor unauthenticated hookData earns a separate credit. This manifest describes the implementation and pool inputs; launch policy and signed artifact linkage belong to services. Independent review, publication, attestation, admission, deployment and the live frontend are separate workflow steps, not outcomes asserted here."
+}
